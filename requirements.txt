@@ -1,0 +1,15 @@
+blessings==1.6.1
+bpython==0.17
+certifi==2018.1.18
+chardet==3.0.4
+cryptopals==0.0.0
+curtsies==0.2.11
+greenlet==0.4.12
+idna==2.6
+pudb==2017.1.4
+Pygments==2.2.0
+requests==2.18.4
+six==1.11.0
+urllib3==1.22
+urwid==2.0.1
+wcwidth==0.1.7
