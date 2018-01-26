@@ -1,8 +1,13 @@
-import doctest
 import base64
 
 from itertools import cycle
 from math import sqrt
+import heapq
+
+from cryptography.hazmat.primitives.ciphers import Cipher
+from cryptography.hazmat.primitives.ciphers.algorithms import AES
+from cryptography.hazmat.primitives.ciphers.modes import ECB
+from cryptography.hazmat.backends import default_backend
 
 # Challenge 1
 def hex_to_base_64(hex):
@@ -31,15 +36,24 @@ def fixed_xor(a, b):
         result.append(first[idx] ^ second[idx])
     return result.hex()
 
+def xor_bytes(message, cipher):
+    """
+    >>> xor_bytes(b'11', b'a')
+    bytearray(b'PP')
+    """
+    result = bytearray(message)
+    for idx in range(0, len(result)):
+        result[idx] = result[idx] ^ ord(cipher)
+    return result
+
+
 def xor_hex(message, cipher):
     """
     >>> xor_hex(b"1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736", b'X')
     bytearray(b"Cooking MC\\'s like a pound of bacon")
     """
     result = bytearray.fromhex(message.decode())
-    for idx in range(0, len(result)):
-        result[idx] = result[idx] ^ ord(cipher)
-    return result
+    return xor_bytes(result, cipher)
 
 
 def frequency_eval(text):
@@ -67,22 +81,32 @@ def frequency_eval(text):
     return result
 
 
-# Challenge 3
-def single_byte_xor_cipher(hex_text):
+def single_byte_xor(text):
     """
-    >>> single_byte_xor_cipher(b"1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+    >>> input = bytearray.fromhex("1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+    >>> single_byte_xor(input)
     ('X', bytearray(b"Cooking MC\\'s like a pound of bacon"), 0.8998029765969737)
     """
     result = ()
     highest_score = 0
     for letter in range(0, 255):
-        message = xor_hex(hex_text, chr(letter))
+        message = xor_bytes(text, chr(letter))
         score = frequency_eval(message)
         if highest_score < score:
             highest_score = score
             result = (chr(letter), message, score)
 
     return result
+
+
+# Challenge 3
+def single_byte_xor_hex(hex_text):
+    """
+    >>> single_byte_xor_hex(b"1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736")
+    ('X', bytearray(b"Cooking MC\\'s like a pound of bacon"), 0.8998029765969737)
+    """
+    data = bytearray.fromhex(hex_text.decode())
+    return single_byte_xor(data)
 
 
 # Challenge Four
@@ -97,7 +121,7 @@ def detect_single_character_crypto(path):
         buffer = bytearray()
         while byte:
             if byte == b'\n':
-                result = single_byte_xor_cipher(buffer)
+                result = single_byte_xor_hex(buffer)
                 if result[2] > highest_score[2]:
                     highest_score = result
 
@@ -158,29 +182,102 @@ def population_count(array):
 
 def find_keysize(text, max_size=40):
     """
-    >>> a = b"HUIfTQsPAh9PE048GmllH0kcDk4TAQsHThsBFkU2AB4BSWQgVB0dQzNTTmVS"
-    >>> b = base64.b64decode(a)
-    >>> find_keysize(b, 10)
-    5
+    >>> f = open("data/one/six.txt", "rb")
+    >>> data = base64.b64decode(f.read())
+    >>> find_keysize(data)
+    [(2.6666666666666665, 3), (2.7, 5), (2.7413793103448274, 29)]
     """
-    size = 0
-    lowest_score = None
+    scores = []
     for keysize in range(1, max_size):
         a = text[:keysize]
         b = text[keysize:keysize*2]
-        score = hamming_distance(a, b) / keysize
-        if lowest_score is None:
-            lowest_score = score
-            size = keysize
-        if score < lowest_score:
-            lowest_score = score
-            size = keysize
+        c = text[keysize*2:keysize*3]
+        d = text[keysize*3:keysize*4]
+        score_a = hamming_distance(a, b)
+        score_b = hamming_distance(b, c)
+        score_c = hamming_distance(c, d)
+        score_d = hamming_distance(a, d)
+        score = (score_a + score_b + score_c + score_d) / 4 / keysize
+        scores.append((score, keysize))
 
-    return size
+    return heapq.nsmallest(3, scores)
+
+
+def transpose_blocks(plaintext, keysize):
+    """
+    >>> transpose_blocks(b'12341234', 4)
+    [b'11', b'22', b'33', b'44']
+    """
+    blocks = []
+    for i in range(0, keysize):
+        # NOTE: after second colon is the step-by number <3 python
+        blocks.append(plaintext[i::keysize])
+    return blocks
+
+
+# Challenge Six
+def break_repeating_key_xor(path):
+    """
+    >>> break_repeating_key_xor("data/one/six.txt")[:25]
+    bytearray(b"I\\'m back and I\\'m ringin\\' ")
+    """
+    f = open(path, "rb")
+    data = base64.b64decode(f.read())
+    keysizes = find_keysize(data)
+    highest_score = 0
+    probably_key = bytearray()
+    for _, size in keysizes:
+        key = bytearray()
+        scores = 0
+        blocks = transpose_blocks(data, size)
+        for block in blocks:
+            result = single_byte_xor(block)
+            key.append(ord(result[0]))
+            scores += result[2]
+        score = scores / size
+        if score > highest_score:
+            highest_score = score
+            probably_key = key
+    cipher = cycle(probably_key)
+    result = bytearray()
+    for letter in data:
+        result.append(next(cipher) ^ letter)
+    return result
+
+
+# Challenge Seven
+def decrypt_aes_ecb(plaintext, key):
+    """
+    >>> f = open("data/one/seven.txt")
+    >>> plaintext = base64.b64decode(f.read())
+    >>> decrypt_aes_ecb(plaintext, b"YELLOW SUBMARINE")[:25]
+    b"I\'m back and I\'m ringin\' "
+    """
+    decryptor = Cipher(
+        AES(key), ECB(), backend=default_backend()
+    ).decryptor()
+    return decryptor.update(plaintext) + decryptor.finalize()
+
+
+# Challenge Eight
+def detect_ecb(plaintext_lines):
+    """
+    >>> f = open("data/one/eight.txt")
+    >>> plaintext = f.readlines()
+    >>> detect_ecb(plaintext)[:64]
+    'd880619740a8a19b7840a8a31c810a3d08649af70dc06f4fd5d2d69c744cd283'
+    """
+    for line in plaintext_lines:
+        text = bytearray.fromhex(line.strip("\n"))
+        seen = []
+        for i in range(0, 10):
+            if text[16*i:16*i+16] in seen:
+                return text.hex()
+            else:
+                seen.append(text[16*i:16*i+16])
+
 
 if __name__ == "__main__":
+    import doctest
     doctest.testmod()
-    f = open("data/one/six.txt", "rb")
-    data = base64.b64decode(f.read())
-    keysize = find_keysize(data)
-    print(keysize)
+    print("Set One Complete!")

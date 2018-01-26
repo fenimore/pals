@@ -2,7 +2,7 @@
 
 These solutions are in python 3 -- the challenges are checked in `doctests` in the relevant functions.
 
-- [ ] Set One
+- [x] Set One
 - [ ] Set Two
 - [ ] Set Three
 - [ ] Set Four
