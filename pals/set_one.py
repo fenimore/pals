@@ -18,22 +18,30 @@ def hex_to_base_64(hex):
     return base64.b64encode(bytearray.fromhex(hex))
 
 
-# Challenge 2
 def fixed_xor(a, b):
     """
-    >>> fixed_xor("1c0111001f010100061a024b53535009181c", \
-        "686974207468652062756c6c277320657965")
-    '746865206b696420646f6e277420706c6179'
-    >>> fixed_xor("1c0111001f010100061a024b53535009181c", "686974207468")
+    >>> fixed_xor(b"0000000000000000", b"1234567898765432").hex()
+    '01020304050607080908070605040302'
+    >>> fixed_xor(b"234", b"0")
     """
-    first = bytearray.fromhex(a)
-    second = bytearray.fromhex(b)
-    if len(first) != len(second) or len(first) == 0:
+    if len(a) != len(b):
         return None
 
     result = bytearray()
-    for idx in range(0, len(first)):
-        result.append(first[idx] ^ second[idx])
+    for idx in range(0, len(a)):
+        result.append(a[idx] ^ b[idx])
+    return result
+
+# Challenge 2
+def fixed_xor_hex(a, b):
+    """
+    >>> fixed_xor_hex("1c0111001f010100061a024b53535009181c", \
+        "686974207468652062756c6c277320657965")
+    '746865206b696420646f6e277420706c6179'
+    """
+    first = bytearray.fromhex(a)
+    second = bytearray.fromhex(b)
+    result = fixed_xor(first, second)
     return result.hex()
 
 def xor_bytes(message, cipher):
@@ -112,7 +120,7 @@ def single_byte_xor_hex(hex_text):
 # Challenge Four
 def detect_single_character_crypto(path):
     """
-    >>> detect_single_character_crypto("data/one/four.txt")
+    >>> detect_single_character_crypto("data/four.txt")
     ('5', bytearray(b\'Now that the party is jumping\\n\'), 0.9514585445439983)
     """
     highest_score = (b'', bytearray(), 0.0)
@@ -182,7 +190,7 @@ def population_count(array):
 
 def find_keysize(text, max_size=40):
     """
-    >>> f = open("data/one/six.txt", "rb")
+    >>> f = open("data/six.txt", "rb")
     >>> data = base64.b64decode(f.read())
     >>> find_keysize(data)
     [(2.6666666666666665, 3), (2.7, 5), (2.7413793103448274, 29)]
@@ -218,7 +226,7 @@ def transpose_blocks(plaintext, keysize):
 # Challenge Six
 def break_repeating_key_xor(path):
     """
-    >>> break_repeating_key_xor("data/one/six.txt")[:25]
+    >>> break_repeating_key_xor("data/six.txt")[:25]
     bytearray(b"I\\'m back and I\\'m ringin\\' ")
     """
     f = open(path, "rb")
@@ -248,7 +256,7 @@ def break_repeating_key_xor(path):
 # Challenge Seven
 def decrypt_aes_ecb(plaintext, key):
     """
-    >>> f = open("data/one/seven.txt")
+    >>> f = open("data/seven.txt")
     >>> plaintext = base64.b64decode(f.read())
     >>> decrypt_aes_ecb(plaintext, b"YELLOW SUBMARINE")[:25]
     b"I\'m back and I\'m ringin\' "
@@ -259,10 +267,26 @@ def decrypt_aes_ecb(plaintext, key):
     return decryptor.update(plaintext) + decryptor.finalize()
 
 
+# Challenge Seven
+def encrypt_ecb_block(message, key):
+    """
+    >>> encrypt_ecb_block(b"The role of CBC ", b"YELLOW SUBMARINE").hex()
+    '4c70bbb7d6585ab30e9600d16705d739'
+    >>> encrypt_ecb_block(b"The role", b"YELLOW SUBMARINE").hex()
+    'ec64fe6d4dfe16fa78250d9352cb560b'
+    """
+    if len(message) % len(key) != 0:
+        message = set_two.implement_pkcs_padding(message, 16)
+    encryptor = Cipher(
+        AES(key), ECB(), backend=default_backend()
+    ).encryptor()
+    return encryptor.update(message) + encryptor.finalize()
+
+
 # Challenge Eight
 def detect_ecb(plaintext_lines):
     """
-    >>> f = open("data/one/eight.txt")
+    >>> f = open("data/eight.txt")
     >>> plaintext = f.readlines()
     >>> detect_ecb(plaintext)[:64]
     'd880619740a8a19b7840a8a31c810a3d08649af70dc06f4fd5d2d69c744cd283'

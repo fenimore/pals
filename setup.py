@@ -2,9 +2,9 @@ import os
 from setuptools import setup
 
 setup(
-    name = "cryptopals",
+    name = "pals",
     version = "0.0.0",
     author = "Fenimore Love",
     description = "cryptopals solutions",
-    license = "MIT",
+    license = "Public Domain",
 )
