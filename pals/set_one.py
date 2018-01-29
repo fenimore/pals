@@ -9,6 +9,9 @@ from cryptography.hazmat.primitives.ciphers.algorithms import AES
 from cryptography.hazmat.primitives.ciphers.modes import ECB
 from cryptography.hazmat.backends import default_backend
 
+
+from pals import set_two
+
 # Challenge 1
 def hex_to_base_64(hex):
     """
