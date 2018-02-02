@@ -16,7 +16,6 @@ class BlockTooBig(Exception):
 
 
 # Challenge Nine
-@decorator
 def implement_pkcs_padding(block, blocksize):
     """
     >>> implement_pkcs_padding(b"YELLOW SUBMARINE", 20)
