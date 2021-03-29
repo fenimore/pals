@@ -10,7 +10,7 @@ greenlet==0.4.12
 idna==2.6
 pudb==2017.1.4
 pycparser==2.18
-Pygments==2.2.0
+Pygments==2.7.4
 requests==2.18.4
 six==1.11.0
 urllib3==1.22
