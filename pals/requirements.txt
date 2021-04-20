@@ -13,7 +13,7 @@ idna==2.6
 -e git+git@github.com:fenimore/pals.git@210944b6bf62e49faff87f61adc9278cbaff8f2a#egg=pals
 pluggy==0.6.0
 pudb==2017.1.4
-py==1.5.2
+py==1.10.0
 pycparser==2.18
 Pygments==2.2.0
 pytest==3.4.0
